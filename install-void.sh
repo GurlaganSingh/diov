@@ -50,6 +50,10 @@ cat > /mnt/etc/fstab <<EOF
 ${DISK}2 / ext4 defaults 0 1
 ${DISK}1 /efi vfat defaults 0 2
 EOF
+# Fix missing timezone symlink that breaks glibc hooks
+ln -sf /usr/share/zoneinfo/UTC /mnt/etc/localtime
+echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+
 # Enable en_US.UTF-8 locale
 sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /mnt/etc/default/libc-locales
 
@@ -60,10 +64,12 @@ mount --rbind /proc /mnt/proc && mount --make-rslave /mnt/proc
 
 # Configure chroot: locales, grub, initramfs
 chroot /mnt /bin/bash <<'CHROOT'
+xbps-reconfigure -f base-files
 xbps-reconfigure -f glibc-locales
 grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id="Void"
 xbps-reconfigure -fa
 CHROOT
+# see the order especially that matters. firstly base then glibc then everything and then grub. After that I think the -fa
 
 echo ""
 echo "=== Base install complete ==="
